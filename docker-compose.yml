@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  app-cardapio-homolog:
+    build:
+      context: .
+      args:
+        - VITE_API_BASE_URL=https://homolog-api-concordia.marshalltds.com/api
+    container_name: app-cardapio-homolog
+    ports:
+      - "5176:80"
+    restart: always
+    networks:
+      - concordia-network
+
+  app-cardapio-production:
+    build:
+      context: .
+      args:
+        - VITE_API_BASE_URL=https://api-concordia.marshalltds.com/api
+    container_name: app-cardapio-production
+    ports:
+      - "3176:80"
+    restart: always
+    networks:
+      - concordia-network
+
+networks:
+  concordia-network:
+    external: true

@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, ChevronRight, Plus, Minus, Search } from 'lucide-react';
+import { ShoppingBag, ChevronRight, Plus, Minus, Search, Image as ImageIcon } from 'lucide-react';
 import { cardapioService } from '../services/api';
 
 // Mock data for UI testing if API is not ready
@@ -19,109 +19,215 @@ const CardapioHome = () => {
     const tenantId = searchParams.get('tenantId');
     const mesaUuid = searchParams.get('mesaUuid');
 
-    const [selectedCategory, setSelectedCategory] = useState('Destaques');
+    const [selectedCategory, setSelectedCategory] = useState<string>('Destaques');
     const [cart, setCart] = useState<Record<string, number>>({});
     const [isCartOpen, setIsCartOpen] = useState(false);
 
-    /*
-    const { data: items = MOCK_ITEMS } = useQuery({
-      queryKey: ['cardapio', tenantId],
-      queryFn: () => cardapioService.getMenu(tenantId!),
-      enabled: !!tenantId
+    const { data: categories = [], isLoading: loadingCategories } = useQuery({
+        queryKey: ['categories', tenantId],
+        queryFn: async () => {
+            const res = await cardapioService.getCategories(tenantId!);
+            return res.data;
+        },
+        enabled: !!tenantId
     });
-    */
-    const items = MOCK_ITEMS;
+
+    const { data: items = [], isLoading: loadingItems } = useQuery({
+        queryKey: ['cardapio', tenantId],
+        queryFn: async () => {
+            const res = await cardapioService.getMenu(tenantId!);
+            return res.data;
+        },
+        enabled: !!tenantId
+    });
+
+    const isLoadingData = loadingCategories || loadingItems;
+    const isEmpty = !isLoadingData && items.length === 0;
+
+    const groupedItems = useMemo(() => {
+        const groups: Record<string, any[]> = {};
+        items.forEach((item: any) => {
+            const catName = item.categoriaNome || item.categoriaCode || 'Outros';
+            if (!groups[catName]) groups[catName] = [];
+            groups[catName].push(item);
+        });
+        return groups;
+    }, [items]);
+
+    const categoryOptions = useMemo(() => {
+        const itemCategories = Object.keys(groupedItems);
+        const ordered = categories
+            .map((c: any) => c.name)
+            .filter((name: string) => itemCategories.includes(name));
+        const others = itemCategories.filter(name => !ordered.includes(name));
+        return ['Destaques', ...ordered, ...others];
+    }, [groupedItems, categories]);
+
+    const displayGroups = useMemo(() => {
+        if (selectedCategory === 'Destaques') return groupedItems;
+        return { [selectedCategory]: groupedItems[selectedCategory] || [] };
+    }, [selectedCategory, groupedItems]);
 
     const totalItems = Object.values(cart).reduce((a, b) => a + b, 0);
-    const totalPrice = Object.entries(cart).reduce((acc, [id, qty]) => {
-        const item = items.find(i => i.id === id);
-        return acc + (item?.preco || 0) * qty;
+    const totalPrice = Object.entries(cart).reduce((acc, [uuid, qty]) => {
+        const item = items.find((i: any) => i.uuid === uuid);
+        return acc + (item?.produtoPreco || 0) * qty;
     }, 0);
 
-    const addToCart = (id: string) => {
-        setCart(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
-    };
+    const addToCart = (uuid: string) => setCart(prev => ({ ...prev, [uuid]: (prev[uuid] || 0) + 1 }));
+    const removeFromCart = (uuid: string) => setCart(prev => {
+        const newCart = { ...prev };
+        if (newCart[uuid] > 1) newCart[uuid]--;
+        else delete newCart[uuid];
+        return newCart;
+    });
 
-    const removeFromCart = (id: string) => {
-        setCart(prev => {
-            const newCart = { ...prev };
-            if (newCart[id] > 1) newCart[id]--;
-            else delete newCart[id];
-            return newCart;
-        });
-    };
+    const [clienteNome, setClienteNome] = useState('');
+    const [isShipping, setIsShipping] = useState(false);
+
+    const formatPrice = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    if (!tenantId) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center bg-white">
+                <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6">
+                    <ShoppingBag className="w-10 h-10" />
+                </div>
+                <h1 className="text-2xl font-bold mb-2">Ops! QR Code Inválido</h1>
+                <p className="text-gray-500">O link que você acessou não contém as informações necessárias.</p>
+            </div>
+        );
+    }
+
+    if (isLoadingData) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-[#f5f5f7]">
+                <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                    className="w-12 h-12 border-4 border-apple-blue/20 border-t-apple-blue rounded-full mb-4"
+                />
+                <p className="text-gray-500 font-medium">Carregando cardápio...</p>
+            </div>
+        );
+    }
+
+    if (isEmpty) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center bg-[#f5f5f7]">
+                <div className="w-20 h-20 bg-gray-200 text-gray-400 rounded-full flex items-center justify-center mb-6">
+                    <Search className="w-10 h-10" />
+                </div>
+                <h1 className="text-2xl font-bold mb-2">Cardápio Vazio</h1>
+                <p className="text-gray-500">Ainda não há itens disponíveis neste cardápio.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen pb-32">
-            {/* Header */}
-            <header className="glass-header px-6 py-8">
-                <div className="flex justify-between items-center mb-6">
+            {/* Glass Header */}
+            <header className="glass-header px-6 py-4 mb-4">
+                <div className="flex justify-between items-center mb-4">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Caldápio</h1>
-                        <p className="text-gray-500 text-sm">Mesa {mesaUuid?.slice(0, 4) || '01'}</p>
+                        <h1 className="text-2xl font-bold">Nosso Cardápio</h1>
+                        <p className="text-sm text-gray-500">Mesa Selecionada</p>
                     </div>
-                    <div className="w-12 h-12 rounded-full overflow-hidden border border-gray-200 shadow-sm">
-                        <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=100&auto=format&fit=crop&q=60" alt="Restaurant Logo" />
+                    <div className="w-10 h-10 rounded-full bg-apple-blue/10 flex items-center justify-center text-apple-blue">
+                        <Search className="w-5 h-5" />
                     </div>
                 </div>
 
-                {/* Search */}
-                <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                        type="text"
-                        placeholder="O que você deseja hoje?"
-                        className="w-full bg-[#e3e3e6] border-none rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-apple-blue transition-all"
-                    />
+                {/* Categories Tabs */}
+                <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
+                    {categoryOptions.map(cat => (
+                        <button
+                            key={cat}
+                            onClick={() => setSelectedCategory(cat)}
+                            className={`px-6 py-2.5 rounded-full font-medium whitespace-nowrap transition-all ${selectedCategory === cat
+                                ? 'bg-apple-blue text-white shadow-md shadow-apple-blue/20'
+                                : 'bg-white text-gray-600 border border-gray-100'
+                                }`}
+                        >
+                            {cat}
+                        </button>
+                    ))}
                 </div>
             </header>
 
-            {/* Category Tabs */}
-            <div className="flex overflow-x-auto hide-scrollbar px-6 py-4 gap-2">
-                {CATEGORIES.map(cat => (
-                    <button
-                        key={cat}
-                        onClick={() => setSelectedCategory(cat)}
-                        className={`px-5 py-2 rounded-full whitespace-nowrap font-medium transition-all ${selectedCategory === cat
-                                ? 'bg-apple-dark text-white'
-                                : 'bg-white text-gray-500'
-                            }`}
-                    >
-                        {cat}
-                    </button>
-                ))}
-            </div>
-
-            {/* Items Grid */}
-            <main className="px-6 grid gap-6">
-                <h2 className="text-xl font-semibold mt-4 mb-2">{selectedCategory}</h2>
-                {items.filter(i => selectedCategory === 'Destaques' || i.categoria === selectedCategory).map(item => (
-                    <motion.div
-                        layout
-                        key={item.id}
-                        className="apple-card flex p-3 gap-4"
-                    >
-                        <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
-                            <img src={item.imagem} alt={item.nome} className="w-full h-full object-cover" />
-                        </div>
-                        <div className="flex-1 flex flex-col justify-between py-1">
-                            <div>
-                                <h3 className="font-semibold text-lg">{item.nome}</h3>
-                                <p className="text-gray-500 text-xs line-clamp-2">{item.descricao}</p>
-                            </div>
-                            <div className="flex justify-between items-end">
-                                <span className="font-bold text-apple-blue">
-                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.preco)}
+            {/* Content List */}
+            <main className="px-6 space-y-8">
+                {Object.entries(displayGroups).map(([groupName, groupItems]) => (
+                    groupItems.length > 0 && (
+                        <section key={groupName}>
+                            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                                {groupName}
+                                <span className="text-xs font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                    {groupItems.length}
                                 </span>
-                                <button
-                                    onClick={() => addToCart(item.id)}
-                                    className="bg-apple-dark text-white p-2 rounded-lg active:scale-90 transition-transform"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                </button>
+                            </h3>
+                            <div className="grid gap-4">
+                                {groupItems.map((item: any) => (
+                                    <motion.div
+                                        key={item.uuid}
+                                        layout
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="apple-card p-4 flex gap-4 active:scale-[0.98] transition-all"
+                                    >
+                                        <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center border border-gray-100 italic text-gray-400 text-[10px] text-center px-2">
+                                            {item.produtoImagem ? (
+                                                <img
+                                                    src={item.produtoImagem}
+                                                    className="w-full h-full object-cover"
+                                                    alt={item.produtoNome}
+                                                />
+                                            ) : (
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <ImageIcon size={16} strokeWidth={1.5} />
+                                                    <span>Sem Foto</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-col justify-between flex-grow">
+                                            <div>
+                                                <h4 className="font-semibold text-[#1d1d1f]">{item.produtoNome}</h4>
+                                                <p className="text-xs text-gray-500 line-clamp-2 mt-1">
+                                                    {item.produtoDescricao || 'Nenhuma descrição disponível.'}
+                                                </p>
+                                            </div>
+                                            <div className="flex justify-between items-center mt-2">
+                                                <span className="font-bold text-apple-blue">
+                                                    {formatPrice(item.produtoPreco || 0)}
+                                                </span>
+                                                <div className="flex items-center gap-3 bg-gray-50 p-1 rounded-xl border border-gray-100">
+                                                    {cart[item.uuid] > 0 && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => removeFromCart(item.uuid)}
+                                                                className="w-7 h-7 flex items-center justify-center rounded-lg bg-white border border-gray-100 text-gray-400 hover:text-red-500"
+                                                            >
+                                                                <Minus className="w-4 h-4" />
+                                                            </button>
+                                                            <span className="font-bold min-w-[1rem] text-center text-sm">
+                                                                {cart[item.uuid]}
+                                                            </span>
+                                                        </>
+                                                    )}
+                                                    <button
+                                                        onClick={() => addToCart(item.uuid)}
+                                                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-apple-blue text-white shadow-sm"
+                                                    >
+                                                        <Plus className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ))}
                             </div>
-                        </div>
-                    </motion.div>
+                        </section>
+                    )
                 ))}
             </main>
 
@@ -136,23 +242,21 @@ const CardapioHome = () => {
                     >
                         <button
                             onClick={() => setIsCartOpen(true)}
-                            className="w-full bg-apple-dark text-white p-4 rounded-full flex justify-between items-center shadow-2xl active:scale-95 transition-all"
+                            className="w-full bg-apple-blue text-white p-4 rounded-2xl font-bold flex justify-between items-center shadow-2xl shadow-apple-blue/40 active:scale-95 transition-all"
                         >
                             <div className="flex items-center gap-3">
-                                <div className="bg-apple-blue w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold">
+                                <div className="bg-white/20 px-3 py-1 rounded-lg text-sm">
                                     {totalItems}
                                 </div>
-                                <span className="font-medium">Ver Sacola</span>
+                                <span>Ver Sacola</span>
                             </div>
-                            <span className="font-bold text-lg">
-                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalPrice)}
-                            </span>
+                            <span className="text-lg">{formatPrice(totalPrice)}</span>
                         </button>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* Cart Drawer (Simplified as a Modal) */}
+            {/* Cart Drawer */}
             <AnimatePresence>
                 {isCartOpen && (
                     <>
@@ -160,7 +264,7 @@ const CardapioHome = () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => setIsCartOpen(false)}
+                            onClick={() => !isShipping && setIsCartOpen(false)}
                             className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60]"
                         />
                         <motion.div
@@ -173,47 +277,99 @@ const CardapioHome = () => {
                             <h2 className="text-2xl font-bold mb-6">Sua Sacola</h2>
 
                             <div className="space-y-6 mb-10">
-                                {Object.entries(cart).map(([id, qty]) => {
-                                    const item = items.find(i => i.id === id)!;
+                                {Object.entries(cart).map(([uuid, qty]) => {
+                                    const item = items.find((i: any) => i.uuid === uuid);
+                                    if (!item) return null;
                                     return (
-                                        <div key={id} className="flex justify-between items-center">
+                                        <div key={uuid} className="flex justify-between items-center">
                                             <div className="flex gap-4 items-center">
                                                 <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100">
-                                                    <img src={item.imagem} className="w-full h-full object-cover" />
+                                                    <img src={item.produtoImagem || item.imagem || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=60'} className="w-full h-full object-cover" />
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-medium">{item.nome}</h4>
+                                                    <h4 className="font-medium">{item.produtoNome}</h4>
                                                     <p className="text-gray-500 text-sm">
-                                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.preco)}
+                                                        {formatPrice(item.produtoPreco || 0)}
                                                     </p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-4 bg-gray-100 p-1 rounded-xl">
-                                                <button onClick={() => removeFromCart(id)} className="p-1 hover:text-apple-blue"><Minus className="w-4 h-4" /></button>
+                                                <button onClick={() => !isShipping && removeFromCart(uuid)} className="p-1 hover:text-apple-blue disabled:opacity-50" disabled={isShipping}><Minus className="w-4 h-4" /></button>
                                                 <span className="font-bold min-w-[1.5rem] text-center">{qty}</span>
-                                                <button onClick={() => addToCart(id)} className="p-1 hover:text-apple-blue"><Plus className="w-4 h-4" /></button>
+                                                <button onClick={() => !isShipping && addToCart(uuid)} className="p-1 hover:text-apple-blue disabled:opacity-50" disabled={isShipping}><Plus className="w-4 h-4" /></button>
                                             </div>
                                         </div>
                                     );
                                 })}
                             </div>
 
+                            <div className="mb-8">
+                                <label className="block text-sm font-semibold text-gray-600 mb-2">
+                                    Seu Nome (Para a comanda)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={clienteNome}
+                                    onChange={(e) => setClienteNome(e.target.value)}
+                                    placeholder="Ex: João Silva"
+                                    disabled={isShipping}
+                                    className="w-full bg-gray-100 border-none rounded-xl py-4 px-5 focus:ring-2 focus:ring-apple-blue transition-all disabled:opacity-50"
+                                />
+                            </div>
+
                             <div className="border-t border-gray-100 pt-6 mb-8">
                                 <div className="flex justify-between mb-2">
                                     <span className="text-gray-500">Subtotal</span>
-                                    <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalPrice)}</span>
+                                    <span>{formatPrice(totalPrice)}</span>
                                 </div>
                                 <div className="flex justify-between font-bold text-xl">
                                     <span>Total</span>
-                                    <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalPrice)}</span>
+                                    <span>{formatPrice(totalPrice)}</span>
                                 </div>
                             </div>
 
                             <button
-                                className="w-full bg-apple-blue text-white p-5 rounded-2xl font-bold text-lg shadow-lg active:scale-95 transition-all"
-                                onClick={() => window.location.href = '/success'}
+                                className={`w-full p-5 rounded-2xl font-bold text-lg shadow-lg active:scale-95 transition-all flex items-center justify-center gap-3 ${clienteNome.trim().length > 2 && !isShipping
+                                    ? 'bg-apple-blue text-white'
+                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    }`}
+                                disabled={clienteNome.trim().length <= 2 || isShipping}
+                                onClick={async () => {
+                                    if (isShipping) return;
+                                    setIsShipping(true);
+                                    try {
+                                        await cardapioService.createOrder({
+                                            tenantId,
+                                            mesaId: mesaUuid,
+                                            clienteNome,
+                                            itens: Object.entries(cart).map(([uuid, qty]) => {
+                                                const item = items.find((i: any) => i.uuid === uuid);
+                                                return {
+                                                    produtoId: item.produtoId,
+                                                    quantidade: qty,
+                                                    precoUnitario: item.produtoPreco
+                                                }
+                                            })
+                                        });
+                                        window.location.href = '/success';
+                                    } catch (error) {
+                                        alert('Erro ao enviar pedido. Tente novamente.');
+                                        setIsShipping(false);
+                                    }
+                                }}
                             >
-                                Confirmar Pedido
+                                {isShipping ? (
+                                    <>
+                                        <motion.div
+                                            animate={{ rotate: 360 }}
+                                            transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                                            className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                                        />
+                                        Enviando Pedido...
+                                    </>
+                                ) : (
+                                    clienteNome.trim().length <= 2 ? 'Informe seu nome' : 'Confirmar Pedido'
+                                )}
                             </button>
                         </motion.div>
                     </>

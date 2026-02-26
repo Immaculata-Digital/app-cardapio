@@ -27,7 +27,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/app-cardapio-homolog:latest
+          tags: ghcr.io/immaculata-digital/app-cardapio-homolog:latest
           build-args: |
             VITE_API_BASE_URL=https://homolog-api-concordia.marshalltds.com/api
 

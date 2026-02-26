@@ -8,7 +8,7 @@ services:
         - VITE_API_BASE_URL=https://homolog-api-concordia.marshalltds.com/api
     container_name: app-cardapio-homolog
     ports:
-      - "5176:80"
+      - "5177:80"
     restart: always
     networks:
       - concordia-network
@@ -20,7 +20,7 @@ services:
         - VITE_API_BASE_URL=https://api-concordia.marshalltds.com/api
     container_name: app-cardapio-production
     ports:
-      - "3176:80"
+      - "3177:80"
     restart: always
     networks:
       - concordia-network

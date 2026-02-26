@@ -45,5 +45,5 @@ jobs:
             --name app-cardapio-homolog \
             --restart always \
             --network concordia-network \
-            -p 5176:80 \
+            -p 5177:80 \
             ghcr.io/${REPO_OWNER_LOWER}/app-cardapio-homolog:latest

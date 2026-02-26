@@ -44,6 +44,6 @@ jobs:
           docker run -d \
             --name app-cardapio-homolog \
             --restart always \
-            --network concordia-network \
             -p 5177:80 \
+            -e VITE_API_BASE_URL="https://homolog-api-concordia.marshalltds.com/api" \
             ghcr.io/${REPO_OWNER_LOWER}/app-cardapio-homolog:latest

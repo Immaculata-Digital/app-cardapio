@@ -5,7 +5,7 @@ services:
     build:
       context: .
       args:
-        - VITE_API_BASE_URL=https://homolog-api-concordia.marshalltds.com/api
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL_HOMOLOG}
     container_name: app-cardapio-homolog
     ports:
       - "5177:80"
@@ -17,7 +17,7 @@ services:
     build:
       context: .
       args:
-        - VITE_API_BASE_URL=https://api-concordia.marshalltds.com/api
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL_MAIN}
     container_name: app-cardapio-production
     ports:
       - "3177:80"

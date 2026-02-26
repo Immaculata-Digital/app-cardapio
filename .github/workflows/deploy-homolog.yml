@@ -46,8 +46,8 @@ jobs:
           docker run -d \
             --name ${IMAGE_NAME} \
             --restart unless-stopped \
-            --network concordia-network \
             -p 5177:80 \
+            -e VITE_API_BASE_URL='${{ secrets.VITE_API_BASE_URL_HOMOLOG }}' \
             ghcr.io/${REPO_OWNER_LOWER}/${IMAGE_NAME}:latest
 
       - name: Cleanup old images

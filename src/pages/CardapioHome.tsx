@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, ChevronRight, Plus, Minus, Search, Image as ImageIcon } from 'lucide-react';
+import { ShoppingBag, ChevronRight, ChevronDown, Plus, Minus, Search, Image as ImageIcon, History, Clock } from 'lucide-react';
 import { cardapioService } from '../services/api';
 
 // Mock data for UI testing if API is not ready
@@ -15,6 +15,7 @@ const MOCK_ITEMS = [
 const CATEGORIES = ['Destaques', 'Burgers', 'Acompanhamentos', 'Bebidas', 'Sobremesas'];
 
 const CardapioHome = () => {
+    const queryClient = useQueryClient();
     const [searchParams] = useSearchParams();
     const tenantId = searchParams.get('tenantId');
     const mesaUuid = searchParams.get('mesaUuid');
@@ -22,6 +23,14 @@ const CardapioHome = () => {
     const [selectedCategory, setSelectedCategory] = useState<string>('Destaques');
     const [cart, setCart] = useState<Record<string, number>>({});
     const [isCartOpen, setIsCartOpen] = useState(false);
+    const [isOrdersExpanded, setIsOrdersExpanded] = useState(false);
+
+    const [clienteNome, setClienteNome] = useState(() => localStorage.getItem('concordia:clienteNome') || '');
+    const [whatsapp, setWhatsapp] = useState(() => localStorage.getItem('concordia:whatsapp') || '');
+
+    // Track if these values were initially pulled from localStorage to disable them
+    const [isNameFromStorage] = useState(() => !!localStorage.getItem('concordia:clienteNome'));
+    const [isWhatsappFromStorage] = useState(() => !!localStorage.getItem('concordia:whatsapp'));
 
     const { data: categories = [], isLoading: loadingCategories } = useQuery({
         queryKey: ['categories', tenantId],
@@ -39,6 +48,16 @@ const CardapioHome = () => {
             return res.data;
         },
         enabled: !!tenantId
+    });
+
+    const { data: myOrders = [], isLoading: loadingOrders } = useQuery({
+        queryKey: ['my-orders', tenantId, whatsapp],
+        queryFn: async () => {
+            const res = await cardapioService.getMyOrders(tenantId!, whatsapp);
+            return res.data;
+        },
+        enabled: !!tenantId && !!whatsapp && whatsapp.length >= 10,
+        refetchInterval: 10000 // Refresh every 10s to see status changes
     });
 
     const isLoadingData = loadingCategories || loadingItems;
@@ -82,7 +101,6 @@ const CardapioHome = () => {
         return newCart;
     });
 
-    const [clienteNome, setClienteNome] = useState('');
     const [isShipping, setIsShipping] = useState(false);
 
     const formatPrice = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -166,6 +184,7 @@ const CardapioHome = () => {
                                     {groupItems.length}
                                 </span>
                             </h3>
+
                             <div className="grid gap-4">
                                 {groupItems.map((item: any) => (
                                     <motion.div
@@ -201,7 +220,7 @@ const CardapioHome = () => {
                                                     {formatPrice(item.produtoPreco || 0)}
                                                 </span>
                                                 <div className="flex items-center gap-3 bg-gray-50 p-1 rounded-xl border border-gray-100">
-                                                    {cart[item.uuid] > 0 && (
+                                                    {(cart[item.uuid] || 0) > 0 && (
                                                         <>
                                                             <button
                                                                 onClick={() => removeFromCart(item.uuid)}
@@ -229,6 +248,74 @@ const CardapioHome = () => {
                         </section>
                     )
                 ))}
+
+                {/* My Open Orders Section - Collapsible and moved below items */}
+                {myOrders.length > 0 && (
+                    <section className="mt-12 py-6 border-t border-gray-100 pb-8">
+                        <button
+                            onClick={() => setIsOrdersExpanded(!isOrdersExpanded)}
+                            className="w-full flex items-center justify-between text-lg font-bold group"
+                        >
+                            <div className="flex items-center gap-2">
+                                <History className="w-5 h-5 text-apple-blue" />
+                                Seus Pedidos de Hoje
+                                <span className="bg-apple-blue/10 text-apple-blue text-[10px] px-2 py-0.5 rounded-full">
+                                    {myOrders.length}
+                                </span>
+                            </div>
+                            <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${isOrdersExpanded ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        <AnimatePresence>
+                            {isOrdersExpanded && (
+                                <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    className="overflow-hidden"
+                                >
+                                    <div className="space-y-3 pt-4">
+                                        {myOrders.map((order: any) => (
+                                            <div key={order.uuid} className={`apple-card p-4 flex justify-between items-center border-l-4 ${order.status === 'NOVO' ? 'border-red-500' :
+                                                order.status === 'EM_PREPARO' ? 'border-orange-500' :
+                                                    order.status === 'PRONTO' ? 'border-green-500' :
+                                                        order.status === 'ENTREGUE' ? 'border-blue-500' :
+                                                            order.status === 'PAGO' ? 'border-emerald-500' :
+                                                                'border-gray-300'
+                                                }`}>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-gray-800">Pedido #{order.seqId}</span>
+                                                        <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Mesa {order.mesaNumero}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 mt-1 text-xs text-gray-500">
+                                                        <Clock className="w-3 h-3" />
+                                                        {new Date(order.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className={`text-xs font-bold px-3 py-1 rounded-full ${order.status === 'NOVO' ? 'bg-red-50 text-red-500' :
+                                                        order.status === 'EM_PREPARO' ? 'bg-orange-50 text-orange-500' :
+                                                            order.status === 'PRONTO' ? 'bg-green-50 text-green-500' :
+                                                                order.status === 'ENTREGUE' ? 'bg-blue-50 text-blue-500' :
+                                                                    order.status === 'PAGO' ? 'bg-emerald-50 text-emerald-600' :
+                                                                        order.status === 'CANCELADO' ? 'bg-gray-100 text-gray-400' :
+                                                                            'bg-gray-50 text-gray-500'
+                                                        }`}>
+                                                        {order.status === 'PAGO' ? 'Pedido Pago' : order.status.replace('_', ' ')}
+                                                    </div>
+                                                    <div className="mt-1 font-bold text-apple-blue">
+                                                        {formatPrice(order.total)}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </section>
+                )}
             </main>
 
             {/* Floating Cart Button */}
@@ -303,17 +390,37 @@ const CardapioHome = () => {
                                 })}
                             </div>
 
-                            <div className="mb-8">
+                            <div className="mb-4">
                                 <label className="block text-sm font-semibold text-gray-600 mb-2">
                                     Seu Nome (Para a comanda)
                                 </label>
                                 <input
                                     type="text"
                                     value={clienteNome}
-                                    onChange={(e) => setClienteNome(e.target.value)}
+                                    onChange={(e) => {
+                                        setClienteNome(e.target.value);
+                                        localStorage.setItem('concordia:clienteNome', e.target.value);
+                                    }}
                                     placeholder="Ex: João Silva"
-                                    disabled={isShipping}
-                                    className="w-full bg-gray-100 border-none rounded-xl py-4 px-5 focus:ring-2 focus:ring-apple-blue transition-all disabled:opacity-50"
+                                    disabled={isShipping || isNameFromStorage}
+                                    className={`w-full bg-gray-100 border-none rounded-xl py-4 px-5 focus:ring-2 focus:ring-apple-blue transition-all ${isShipping || isNameFromStorage ? 'opacity-50 cursor-not-allowed grayscale-[0.5]' : ''}`}
+                                />
+                            </div>
+
+                            <div className="mb-8">
+                                <label className="block text-sm font-semibold text-gray-600 mb-2">
+                                    Seu WhatsApp (Referência da comanda)
+                                </label>
+                                <input
+                                    type="tel"
+                                    value={whatsapp}
+                                    onChange={(e) => {
+                                        setWhatsapp(e.target.value);
+                                        localStorage.setItem('concordia:whatsapp', e.target.value);
+                                    }}
+                                    placeholder="Ex: 11999999999"
+                                    disabled={isShipping || isWhatsappFromStorage}
+                                    className={`w-full bg-gray-100 border-none rounded-xl py-4 px-5 focus:ring-2 focus:ring-apple-blue transition-all ${isShipping || isWhatsappFromStorage ? 'opacity-50 cursor-not-allowed grayscale-[0.5]' : ''}`}
                                 />
                             </div>
 
@@ -329,11 +436,11 @@ const CardapioHome = () => {
                             </div>
 
                             <button
-                                className={`w-full p-5 rounded-2xl font-bold text-lg shadow-lg active:scale-95 transition-all flex items-center justify-center gap-3 ${clienteNome.trim().length > 2 && !isShipping
+                                className={`w-full p-5 rounded-2xl font-bold text-lg shadow-lg active:scale-95 transition-all flex items-center justify-center gap-3 ${clienteNome.trim().length > 2 && whatsapp.trim().length >= 10 && !isShipping
                                     ? 'bg-apple-blue text-white'
                                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                     }`}
-                                disabled={clienteNome.trim().length <= 2 || isShipping}
+                                disabled={clienteNome.trim().length <= 2 || whatsapp.trim().length < 10 || isShipping}
                                 onClick={async () => {
                                     if (isShipping) return;
                                     setIsShipping(true);
@@ -342,6 +449,7 @@ const CardapioHome = () => {
                                             tenantId,
                                             mesaId: mesaUuid,
                                             clienteNome,
+                                            whatsapp,
                                             itens: Object.entries(cart).map(([uuid, qty]) => {
                                                 const item = items.find((i: any) => i.uuid === uuid);
                                                 return {
@@ -351,7 +459,11 @@ const CardapioHome = () => {
                                                 }
                                             })
                                         });
-                                        window.location.href = '/success';
+                                        // Finalizar pedido e limpar carrinho
+                                        setCart({});
+                                        setIsCartOpen(false);
+                                        setIsShipping(false);
+                                        queryClient.invalidateQueries({ queryKey: ['my-orders'] });
                                     } catch (error) {
                                         alert('Erro ao enviar pedido. Tente novamente.');
                                         setIsShipping(false);
@@ -368,7 +480,11 @@ const CardapioHome = () => {
                                         Enviando Pedido...
                                     </>
                                 ) : (
-                                    clienteNome.trim().length <= 2 ? 'Informe seu nome' : 'Confirmar Pedido'
+                                    clienteNome.trim().length <= 2
+                                        ? 'Informe seu nome'
+                                        : whatsapp.trim().length < 10
+                                            ? 'Informe seu WhatsApp'
+                                            : 'Confirmar Pedido'
                                 )}
                             </button>
                         </motion.div>

@@ -44,7 +44,7 @@ export const AppleModal = forwardRef<HTMLDivElement, AppleModalProps>(({
                         onDragEnd={(_, info) => {
                             if (info.offset.y > 100) onClose();
                         }}
-                        className={`fixed bottom-0 left-0 right-0 bg-white rounded-t-[32px] z-[70] flex flex-col shadow-2xl overflow-hidden md:left-1/2 md:-translate-x-1/2 md:max-w-2xl`}
+                        className={`fixed bottom-0 left-0 right-0 bg-white rounded-t-[32px] z-[70] flex flex-col shadow-2xl overflow-hidden md:inset-x-0 md:mx-auto md:max-w-2xl`}
                         style={{ maxHeight }}
                     >
                         {/* Handle Bar */}

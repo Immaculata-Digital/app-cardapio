@@ -55,15 +55,17 @@ export const ProductModal = ({
 
     // Use activeProduct for rendering, but check isOpen for the modal itself
     if (!activeProduct) return null;
+    console.log(activeProduct);
 
-    const fichaTecnica = activeProduct.fichaTecnica || [];
-    const getFichaValue = (keys: string[]) => {
-        const item = fichaTecnica.find((f: any) => keys.includes(f.chave?.toLowerCase().trim()));
-        return item ? item.valor : null;
+    const descricao = activeProduct.descricao;
+
+    const formatTempoPreparo = (min?: number | null, max?: number | null): string | null => {
+        if (!min && !max) return null;
+        if (min && max && min !== max) return `${min}–${max} min`;
+        return `${min || max} min`;
     };
+    const preparo = formatTempoPreparo(activeProduct.tempoPreparo_min, activeProduct.tempoPreparo_max);
 
-    const descricao = getFichaValue(['descrição', 'descricao']) || activeProduct.produtoDescricao;
-    const preparo = getFichaValue(['preparo', 'tempo de preparo', 'tempo']);
 
     return (
         <AppleModal

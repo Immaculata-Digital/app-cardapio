@@ -11,7 +11,7 @@ const OrderSuccess = () => {
                 initial={{ scale: 0.5, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: "spring", damping: 15 }}
-                className="text-apple-blue mb-8"
+                className="text-[var(--primary)] mb-8"
             >
                 <CheckCircle2 size={120} strokeWidth={1.5} />
             </motion.div>

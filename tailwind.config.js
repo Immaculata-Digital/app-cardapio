@@ -7,6 +7,8 @@ export default {
     theme: {
         extend: {
             colors: {
+                primary: 'var(--primary)',
+                'primary-dark': 'var(--primary-dark)',
                 apple: {
                     blue: '#007aff',
                     gray: '#f5f5f7',

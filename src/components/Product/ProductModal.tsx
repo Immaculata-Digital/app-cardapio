@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ShoppingBag, Clock, Plus, Minus, Image as ImageIcon } from 'lucide-react';
+import { ShoppingBag, Clock, Plus, Minus, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRef, useEffect, useState } from 'react';
 import { AppleModal } from '../common/AppleModal';
 import { formatPrice } from '../../utils/format';
@@ -26,7 +26,17 @@ export const ProductModal = ({
     onRelatedClick
 }: ProductModalProps) => {
     const scrollRef = useRef<HTMLDivElement>(null);
+    const relatedRef = useRef<HTMLDivElement>(null);
     const [activeProduct, setActiveProduct] = useState<any>(null);
+
+    const scrollRelated = (direction: 'left' | 'right') => {
+        if (!relatedRef.current) return;
+        const scrollAmount = 300;
+        relatedRef.current.scrollBy({
+            left: direction === 'left' ? -scrollAmount : scrollAmount,
+            behavior: 'smooth'
+        });
+    };
 
     // Sync activeProduct only when product is present
     // This allows the modal to keep showing content during the exit animation
@@ -45,6 +55,15 @@ export const ProductModal = ({
 
     // Use activeProduct for rendering, but check isOpen for the modal itself
     if (!activeProduct) return null;
+
+    const fichaTecnica = activeProduct.fichaTecnica || [];
+    const getFichaValue = (keys: string[]) => {
+        const item = fichaTecnica.find((f: any) => keys.includes(f.chave?.toLowerCase().trim()));
+        return item ? item.valor : null;
+    };
+
+    const descricao = getFichaValue(['descrição', 'descricao']) || activeProduct.produtoDescricao;
+    const preparo = getFichaValue(['preparo', 'tempo de preparo', 'tempo']);
 
     return (
         <AppleModal
@@ -85,7 +104,7 @@ export const ProductModal = ({
         >
             <div className="space-y-8">
                 {/* Image Container */}
-                <div className="relative aspect-square w-full rounded-3xl overflow-hidden bg-gray-50 drop-shadow-sm border border-gray-100">
+                <div className="relative aspect-square md:aspect-auto md:h-[300px] w-full rounded-3xl overflow-hidden bg-gray-50 drop-shadow-sm border border-gray-100">
                     {activeProduct.produtoImagem ? (
                         <img
                             src={activeProduct.produtoImagem}
@@ -105,22 +124,26 @@ export const ProductModal = ({
                     <h2 className="text-3xl font-black text-[#2D3436] tracking-tight mb-4">
                         {activeProduct.produtoNome}
                     </h2>
-                    <p className="text-[#2D3436]/60 leading-relaxed text-lg">
-                        {activeProduct.produtoDescricao || 'Uma deliciosa opção preparada com ingredientes selecionados para proporcionar uma experiência única de sabor e textura.'}
-                    </p>
+                    {descricao && (
+                        <p className="text-[#2D3436]/60 leading-relaxed text-lg">
+                            {descricao}
+                        </p>
+                    )}
                 </div>
 
                 {/* Info Blocks */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-gray-50 p-5 rounded-3xl border border-gray-100">
-                        <div className="flex items-center gap-2 text-gray-400 uppercase tracking-widest text-[10px] font-bold mb-2">
-                            <Clock className="w-3.5 h-3.5" />
-                            <span>Preparo</span>
+                <div className={`grid ${preparo ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
+                    {preparo && (
+                        <div className="bg-gray-50 p-5 rounded-3xl border border-gray-100">
+                            <div className="flex items-center gap-2 text-gray-400 uppercase tracking-widest text-[10px] font-bold mb-2">
+                                <Clock className="w-3.5 h-3.5" />
+                                <span>Preparo</span>
+                            </div>
+                            <div className="text-[#2D3436] font-bold text-xl">
+                                {preparo}
+                            </div>
                         </div>
-                        <div className="text-[#2D3436] font-bold text-xl">
-                            15-20 min
-                        </div>
-                    </div>
+                    )}
                     <div className="bg-gray-50 p-5 rounded-3xl border border-gray-100">
                         <div className="flex items-center gap-2 text-gray-400 uppercase tracking-widest text-[10px] font-bold mb-2">
                             <ShoppingBag className="w-3.5 h-3.5" />
@@ -134,9 +157,13 @@ export const ProductModal = ({
 
                 {/* Recommendations */}
                 {relatedItems.length > 0 && (
-                    <div className="pt-4 pb-8">
+                    <div className="pt-4 pb-8 relative">
                         <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6">VEJA TAMBÉM</h3>
-                        <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2 -mx-2 px-2">
+                        
+                        <div 
+                            ref={relatedRef}
+                            className="flex gap-4 overflow-x-auto hide-scrollbar pb-2 -mx-2 px-2 scroll-smooth"
+                        >
                             {relatedItems.map((related: any) => (
                                 <div 
                                     key={related.uuid} 
@@ -156,6 +183,22 @@ export const ProductModal = ({
                                     <p className="text-xs font-bold text-[var(--primary)]">{formatPrice(related.produtoPreco || 0)}</p>
                                 </div>
                             ))}
+                        </div>
+
+                        {/* Navigation Arrows (Desktop Only) */}
+                        <div className="hidden md:flex absolute bottom-0 right-0 gap-2 pb-4">
+                            <button 
+                                onClick={() => scrollRelated('left')}
+                                className="p-2.5 rounded-xl bg-white border border-gray-100 shadow-sm hover:bg-gray-50 active:scale-90 transition-all text-gray-400 hover:text-[var(--primary)]"
+                            >
+                                <ChevronLeft className="w-5 h-5" />
+                            </button>
+                            <button 
+                                onClick={() => scrollRelated('right')}
+                                className="p-2.5 rounded-xl bg-white border border-gray-100 shadow-sm hover:bg-gray-50 active:scale-90 transition-all text-gray-400 hover:text-[var(--primary)]"
+                            >
+                                <ChevronRight className="w-5 h-5" />
+                            </button>
                         </div>
                     </div>
                 )}

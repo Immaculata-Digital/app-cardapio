@@ -40,7 +40,7 @@ export const ProductCard = ({
             </div>
             <div className="flex flex-col justify-between flex-grow py-1">
                 <div>
-                    <h4 className="font-bold text-[#2D3436] text-[15px] leading-tight">{item.produtoNome}</h4>
+                    <h4 className="font-bold text-[#2D3436] text-[15px] leading-tight line-clamp-2 break-words overflow-hidden">{item.produtoNome}</h4>
                 </div>
                 <div className="flex justify-between items-end">
                     <span className="font-bold text-[#2D3436]">

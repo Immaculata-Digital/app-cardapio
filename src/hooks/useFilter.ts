@@ -14,10 +14,20 @@ export const useFilter = (items: any[], categories: any[]) => {
     };
 
     const filteredAndSortedItems = useMemo(() => {
+        // Filtragem estrita: Título, Preço e Imagem devem existir
         let result = items.filter((item: any) => 
-            item.produtoNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (item.produtoDescricao && item.produtoDescricao.toLowerCase().includes(searchTerm.toLowerCase()))
+            item.produtoNome?.trim() && 
+            (item.produtoPreco || 0) > 0 && 
+            item.produtoImagem
         );
+
+        // Busca por termo
+        if (searchTerm.trim()) {
+            result = result.filter((item: any) => 
+                item.produtoNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (item.produtoDescricao && item.produtoDescricao.toLowerCase().includes(searchTerm.toLowerCase()))
+            );
+        }
 
         // Sorting logic
         result = [...result].sort((a: any, b: any) => {

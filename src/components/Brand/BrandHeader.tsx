@@ -28,7 +28,7 @@ export const BrandHeader = ({
                     )}
                     {!brandConfig?.logo?.principal && (
                         <h2 className="text-xl font-black text-[var(--primary)] tracking-tight">
-                            {brandConfig?.name || "Concordia"}
+                            {brandConfig?.name || "Cardápio"}
                         </h2>
                     )}
                 </div>

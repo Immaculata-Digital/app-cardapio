@@ -1,39 +1,35 @@
 import { useState, useMemo } from 'react';
 
 export const useFilter = (items: any[], categories: any[]) => {
-    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [sortBy, setSortBy] = useState<'alphabetical' | 'price-asc' | 'price-desc'>('alphabetical');
     const [searchTerm, setSearchTerm] = useState('');
 
     const toggleCategory = (category: string) => {
-        setSelectedCategories(prev => 
-            prev.includes(category) 
-                ? prev.filter(c => c !== category) 
-                : [...prev, category]
-        );
+        setSelectedCategory(prev => prev === category ? null : category);
     };
 
     const filteredAndSortedItems = useMemo(() => {
-        // Filtragem estrita: Título, Preço e Imagem devem existir
-        let result = items.filter((item: any) => 
-            item.produtoNome?.trim() && 
-            (item.produtoPreco || 0) > 0 && 
-            item.produtoImagem
+        // Filtragem básica: Nome deve existir
+        let result = (items || []).filter((item: any) => 
+            item?.nome?.trim()
         );
 
         // Busca por termo
         if (searchTerm.trim()) {
-            result = result.filter((item: any) => 
-                item.produtoNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (item.produtoDescricao && item.produtoDescricao.toLowerCase().includes(searchTerm.toLowerCase()))
-            );
+            const normalizedSearch = searchTerm.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+            result = result.filter((item: any) => {
+                const normalizedNome = item.nome ? item.nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : '';
+                const normalizedDesc = item.descricao ? item.descricao.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : '';
+                return normalizedNome.includes(normalizedSearch) || normalizedDesc.includes(normalizedSearch);
+            });
         }
 
         // Sorting logic
         result = [...result].sort((a: any, b: any) => {
-            if (sortBy === 'alphabetical') return a.produtoNome.localeCompare(b.produtoNome);
-            if (sortBy === 'price-asc') return (a.produtoPreco || 0) - (b.produtoPreco || 0);
-            if (sortBy === 'price-desc') return (b.produtoPreco || 0) - (a.produtoPreco || 0);
+            if (sortBy === 'alphabetical') return (a.nome || '').localeCompare(b.nome || '');
+            if (sortBy === 'price-asc') return (a.precos?.preco || 0) - (b.precos?.preco || 0);
+            if (sortBy === 'price-desc') return (b.precos?.preco || 0) - (a.precos?.preco || 0);
             return 0;
         });
 
@@ -43,7 +39,7 @@ export const useFilter = (items: any[], categories: any[]) => {
     const groupedItems = useMemo(() => {
         const groups: Record<string, any[]> = {};
         filteredAndSortedItems.forEach((item: any) => {
-            const catName = item.categoriaNome || item.categoriaCode || 'Outros';
+            const catName = item.categoria_nome || item.categoria_code || 'Outros';
             if (!groups[catName]) groups[catName] = [];
             groups[catName].push(item);
         });
@@ -51,14 +47,15 @@ export const useFilter = (items: any[], categories: any[]) => {
     }, [filteredAndSortedItems]);
 
     const displayGroups = useMemo(() => {
-        if (selectedCategories.length === 0) return groupedItems;
+        // Se estiver buscando ou não houver filtro, mostra tudo
+        if (searchTerm.trim() || !selectedCategory) return groupedItems;
         
         const filteredGroups: Record<string, any[]> = {};
-        selectedCategories.forEach(cat => {
-            if (groupedItems[cat]) filteredGroups[cat] = groupedItems[cat];
-        });
+        if (groupedItems[selectedCategory]) {
+            filteredGroups[selectedCategory] = groupedItems[selectedCategory];
+        }
         return filteredGroups;
-    }, [selectedCategories, groupedItems]);
+    }, [selectedCategory, groupedItems, searchTerm]);
 
     const categoryOptions = useMemo(() => {
         const itemCategories = Object.keys(groupedItems);
@@ -70,14 +67,14 @@ export const useFilter = (items: any[], categories: any[]) => {
     }, [groupedItems, categories]);
 
     const resetFilters = () => {
-        setSelectedCategories([]);
+        setSelectedCategory(null);
         setSortBy('alphabetical');
         setSearchTerm('');
     };
 
     return {
-        selectedCategories,
-        setSelectedCategories,
+        selectedCategory,
+        setSelectedCategory,
         toggleCategory,
         sortBy,
         setSortBy,

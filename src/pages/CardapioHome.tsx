@@ -39,7 +39,7 @@ const CardapioHome = () => {
 
     // Filter Hook
     const {
-        selectedCategories,
+        selectedCategory,
         toggleCategory,
         sortBy,
         setSortBy,
@@ -179,7 +179,7 @@ const CardapioHome = () => {
                             <button
                                 key={cat}
                                 onClick={() => toggleCategory(cat)}
-                                className={`badge-category flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold transition-all border ${selectedCategories.includes(cat) 
+                                className={`badge-category flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold transition-all border ${selectedCategory === cat 
                                     ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-lg shadow-[var(--primary)]/20' 
                                     : 'bg-white text-gray-500 border-gray-100 hover:border-gray-200'}`}
                             >
@@ -195,6 +195,8 @@ const CardapioHome = () => {
                     onAdd={addToCart}
                     onRemove={removeFromCart}
                     onProductClick={setSelectedProduct}
+                    searchTerm={searchTerm}
+                    hasActiveFilters={!!selectedCategory || !!searchTerm}
                 />
 
                 {/* Floating Cart Summary */}
@@ -257,7 +259,7 @@ const CardapioHome = () => {
                     isOpen={isFilterModalOpen}
                     onClose={() => setIsFilterModalOpen(false)}
                     categoryOptions={categoryOptions}
-                    selectedCategories={selectedCategories}
+                    selectedCategory={selectedCategory}
                     onCategoryToggle={toggleCategory}
                     sortBy={sortBy}
                     onSortChange={setSortBy}

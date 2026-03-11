@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Image as ImageIcon, Plus, Minus } from 'lucide-react';
+import { Image as ImageIcon, Plus, Minus, Clock } from 'lucide-react';
 import { formatPrice } from '../../utils/format';
 
 interface ProductCardProps {
@@ -10,6 +10,23 @@ interface ProductCardProps {
     onClick: (item: any) => void;
 }
 
+const getMinutes = (tempo: any): number | null => {
+    if (!tempo) return null;
+    if (typeof tempo === 'number') return tempo;
+    if (typeof tempo === 'string') {
+        const parts = tempo.split(':');
+        if (parts.length === 3) return (parseInt(parts[0]) || 0) * 60 + (parseInt(parts[1]) || 0);
+        return parseInt(tempo, 10);
+    }
+    if (typeof tempo === 'object') {
+        let mins = 0;
+        if (tempo.hours) mins += tempo.hours * 60;
+        if (tempo.minutes) mins += tempo.minutes;
+        return mins > 0 ? mins : null;
+    }
+    return null;
+};
+
 export const ProductCard = ({
     item,
     cartCount,
@@ -17,6 +34,20 @@ export const ProductCard = ({
     onRemove,
     onClick
 }: ProductCardProps) => {
+    // Extract prep time handling different possible formats and locations
+    const tempoMinRaw = item.tempo_preparo_min || item.tempoPreparo_min || item.cardapio?.tempo_preparo_min || item.cardapio?.tempoPreparo_min;
+    const tempoMaxRaw = item.tempo_preparo_max || item.tempoPreparo_max || item.cardapio?.tempo_preparo_max || item.cardapio?.tempoPreparo_max;
+    
+    const minTempo = getMinutes(tempoMinRaw);
+    const maxTempo = getMinutes(tempoMaxRaw);
+    
+    let tempoDisplay = '';
+    if (minTempo && maxTempo && minTempo !== maxTempo) {
+        tempoDisplay = `${minTempo}-${maxTempo} min`;
+    } else if (minTempo || maxTempo) {
+        tempoDisplay = `${minTempo || maxTempo} min`;
+    }
+
     return (
         <motion.div
             layout
@@ -26,11 +57,11 @@ export const ProductCard = ({
             onClick={() => onClick(item)}
         >
             <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gray-50 flex-shrink-0 border border-gray-100">
-                {item.produtoImagem ? (
+                {item.image_url ? (
                     <img
-                        src={item.produtoImagem}
+                        src={item.image_url}
                         className="w-full h-full object-cover"
-                        alt={item.produtoNome}
+                        alt={item.nome}
                     />
                 ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-300">
@@ -40,12 +71,20 @@ export const ProductCard = ({
             </div>
             <div className="flex flex-col justify-between flex-grow py-1">
                 <div>
-                    <h4 className="font-bold text-[#2D3436] text-[15px] leading-tight line-clamp-2 break-words overflow-hidden">{item.produtoNome}</h4>
+                    <h4 className="font-bold text-[#2D3436] text-[15px] leading-tight line-clamp-2 break-words overflow-hidden">{item.nome}</h4>
                 </div>
                 <div className="flex justify-between items-end">
-                    <span className="font-bold text-[#2D3436]">
-                        {formatPrice(item.produtoPreco || 0)}
-                    </span>
+                    <div className="flex flex-col">
+                        {tempoDisplay && (
+                            <div className="flex items-center gap-1 text-[11px] text-gray-400 font-medium mb-0.5">
+                                <Clock className="w-3 h-3" />
+                                <span>{tempoDisplay}</span>
+                            </div>
+                        )}
+                        <span className="font-bold text-[#2D3436]">
+                            {formatPrice(item.precos?.preco || 0)}
+                        </span>
+                    </div>
                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         {cartCount > 0 ? (
                             <motion.div 

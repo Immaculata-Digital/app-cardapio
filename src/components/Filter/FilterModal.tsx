@@ -5,7 +5,7 @@ interface FilterModalProps {
     isOpen: boolean;
     onClose: () => void;
     categoryOptions: string[];
-    selectedCategories: string[];
+    selectedCategory: string | null;
     onCategoryToggle: (category: string) => void;
     sortBy: 'alphabetical' | 'price-asc' | 'price-desc';
     onSortChange: (sort: 'alphabetical' | 'price-asc' | 'price-desc') => void;
@@ -16,13 +16,13 @@ export const FilterModal = ({
     isOpen,
     onClose,
     categoryOptions,
-    selectedCategories,
+    selectedCategory,
     onCategoryToggle,
     sortBy,
     onSortChange,
     onReset
 }: FilterModalProps) => {
-    const hasFilters = selectedCategories.length > 0 || sortBy !== 'alphabetical';
+    const hasFilters = !!selectedCategory || sortBy !== 'alphabetical';
 
     return (
         <AppleModal
@@ -80,7 +80,7 @@ export const FilterModal = ({
                             <button
                                 key={cat}
                                 onClick={() => onCategoryToggle(cat)}
-                                className={`px-5 py-3 rounded-2xl text-sm font-bold transition-all border-2 ${selectedCategories.includes(cat)
+                                className={`px-5 py-3 rounded-2xl text-sm font-bold transition-all border-2 ${selectedCategory === cat
                                     ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-lg shadow-[var(--primary)]/20'
                                     : 'bg-white text-gray-500 border-gray-100 hover:border-gray-200'}`}
                             >

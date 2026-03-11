@@ -97,8 +97,8 @@ export const CartModal = ({
                                         className="apple-card p-4 flex gap-4 border border-gray-50 bg-white rounded-2xl shadow-sm"
                                     >
                                         <div className="w-20 h-20 rounded-2xl bg-gray-50 overflow-hidden flex-shrink-0 border border-gray-100">
-                                            {item.produtoImagem ? (
-                                                <img src={item.produtoImagem} className="w-full h-full object-cover" />
+                                            {item.image_url ? (
+                                                <img src={item.image_url} className="w-full h-full object-cover" />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center text-gray-300">
                                                     <ShoppingBag strokeWidth={1} />
@@ -107,9 +107,9 @@ export const CartModal = ({
                                         </div>
                                         <div className="flex flex-col justify-between flex-grow py-1">
                                             <div className="flex justify-between items-start">
-                                                <h4 className="font-bold text-[#2D3436] text-sm leading-tight pr-4">{item.produtoNome}</h4>
+                                                <h4 className="font-bold text-[#2D3436] text-sm leading-tight pr-4">{item.nome}</h4>
                                                 <span className="font-black text-[var(--primary)] text-sm whitespace-nowrap">
-                                                    {formatPrice((item.produtoPreco || 0) * item.qty)}
+                                                    {formatPrice((item.precos?.preco || 0) * item.qty)}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-3 bg-gray-50 self-start px-2 py-1 rounded-xl border border-gray-100 mt-2">

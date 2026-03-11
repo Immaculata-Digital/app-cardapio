@@ -53,7 +53,7 @@ export const useCart = (items: any[], tenantId?: string | null) => {
     const totalPrice = useMemo(() => 
         Object.entries(cart).reduce((acc, [uuid, qty]) => {
             const item = items?.find((i: any) => i.uuid === uuid);
-            return acc + (item?.produtoPreco || 0) * qty;
+            return acc + (item?.precos?.preco || 0) * qty;
         }, 0), 
     [cart, items]);
 

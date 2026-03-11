@@ -96,9 +96,9 @@ const CardapioHome = () => {
                 itens: Object.entries(cart).map(([uuid, qty]) => {
                     const item = items.find((i: any) => i.uuid === uuid);
                     return {
-                        produtoId: item.produtoId,
+                        produtoId: item.uuid,
                         quantidade: qty,
-                        precoUnitario: item.produtoPreco
+                        precoUnitario: item.precos?.preco_promocional > 0 ? item.precos.preco_promocional : (item.precos?.preco || 0)
                     };
                 })
             });

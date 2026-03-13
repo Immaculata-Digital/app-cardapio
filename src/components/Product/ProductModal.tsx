@@ -64,7 +64,13 @@ export const ProductModal = ({
         if (min && max && min !== max) return `${min}–${max} min`;
         return `${min || max} min`;
     };
-    const preparo = formatTempoPreparo(activeProduct.tempoPreparo_min, activeProduct.tempoPreparo_max);
+
+    const tempoMinRaw = activeProduct.tempo_preparo_min || activeProduct.tempoPreparo_min || activeProduct.cardapio?.tempo_preparo_min || activeProduct.cardapio?.tempoPreparo_min;
+    const tempoMaxRaw = activeProduct.tempo_preparo_max || activeProduct.tempoPreparo_max || activeProduct.cardapio?.tempo_preparo_max || activeProduct.cardapio?.tempoPreparo_max;
+
+    const preparo = formatTempoPreparo(tempoMinRaw, tempoMaxRaw);
+    const exibirTempoPreparo = activeProduct.exibir_tempo_preparo ?? activeProduct.cardapio?.exibir_tempo_preparo ?? true;
+
 
 
     return (
@@ -107,11 +113,11 @@ export const ProductModal = ({
             <div className="space-y-8">
                 {/* Image Container */}
                 <div className="relative aspect-square md:aspect-auto md:h-[300px] w-full rounded-3xl overflow-hidden bg-gray-50 drop-shadow-sm border border-gray-100">
-                    {activeProduct.produtoImagem ? (
+                    {activeProduct.image_url ? (
                         <img
-                            src={activeProduct.produtoImagem}
+                            src={activeProduct.image_url}
                             className="w-full h-full object-cover"
-                            alt={activeProduct.produtoNome}
+                            alt={activeProduct.nome}
                         />
                     ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-300">
@@ -124,7 +130,7 @@ export const ProductModal = ({
                 {/* Title & Description */}
                 <div>
                     <h2 className="text-3xl font-black text-[#2D3436] tracking-tight mb-4">
-                        {activeProduct.produtoNome}
+                        {activeProduct.nome}
                     </h2>
                     {descricao && (
                         <p className="text-[#2D3436]/60 leading-relaxed text-lg">
@@ -134,8 +140,8 @@ export const ProductModal = ({
                 </div>
 
                 {/* Info Blocks */}
-                <div className={`grid ${preparo ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
-                    {preparo && (
+                <div className={`grid ${(preparo && exibirTempoPreparo) ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
+                    {preparo && exibirTempoPreparo && (
                         <div className="bg-gray-50 p-5 rounded-3xl border border-gray-100">
                             <div className="flex items-center gap-2 text-gray-400 uppercase tracking-widest text-[10px] font-bold mb-2">
                                 <Clock className="w-3.5 h-3.5" />
@@ -152,7 +158,7 @@ export const ProductModal = ({
                             <span>Preço</span>
                         </div>
                         <div className="text-[#2D3436] font-bold text-xl">
-                            {formatPrice(activeProduct.produtoPreco || 0)}
+                            {formatPrice(activeProduct.precos?.preco || 0)}
                         </div>
                     </div>
                 </div>
@@ -173,16 +179,16 @@ export const ProductModal = ({
                                     onClick={() => onRelatedClick(related)}
                                 >
                                     <div className="aspect-square w-full rounded-2xl overflow-hidden bg-gray-50 mb-3 border border-gray-100 group-active:scale-95 transition-all shadow-sm">
-                                        {related.produtoImagem ? (
-                                            <img src={related.produtoImagem} className="w-full h-full object-cover" alt={related.produtoNome} />
+                                        {related.image_url ? (
+                                            <img src={related.image_url} className="w-full h-full object-cover" alt={related.nome} />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-gray-200">
                                                 <ImageIcon size={24} />
                                             </div>
                                         )}
                                     </div>
-                                    <h5 className="font-bold text-[#2D3436] line-clamp-1 text-sm">{related.produtoNome}</h5>
-                                    <p className="text-xs font-bold text-[var(--primary)]">{formatPrice(related.produtoPreco || 0)}</p>
+                                    <h5 className="font-bold text-[#2D3436] line-clamp-1 text-sm">{related.nome}</h5>
+                                    <p className="text-xs font-bold text-[var(--primary)]">{formatPrice(related.precos?.preco || 0)}</p>
                                 </div>
                             ))}
                         </div>

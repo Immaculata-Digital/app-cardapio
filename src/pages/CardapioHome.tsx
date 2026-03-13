@@ -251,7 +251,7 @@ const CardapioHome = () => {
                     cartCount={cart[selectedProduct?.uuid] || 0}
                     onAdd={addToCart}
                     onRemove={removeFromCart}
-                    relatedItems={items.filter((i: any) => i.produtoCategoriaId === selectedProduct?.produtoCategoriaId && i.uuid !== selectedProduct?.uuid).slice(0, 6)}
+                    relatedItems={items.filter((i: any) => i.categoria_code === selectedProduct?.categoria_code && i.uuid !== selectedProduct?.uuid).slice(0, 6)}
                     onRelatedClick={setSelectedProduct}
                 />
 

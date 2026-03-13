@@ -40,6 +40,7 @@ export const ProductCard = ({
     
     const minTempo = getMinutes(tempoMinRaw);
     const maxTempo = getMinutes(tempoMaxRaw);
+    const exibirTempoPreparo = item.exibir_tempo_preparo ?? item.cardapio?.exibir_tempo_preparo ?? true;
     
     let tempoDisplay = '';
     if (minTempo && maxTempo && minTempo !== maxTempo) {
@@ -75,10 +76,10 @@ export const ProductCard = ({
                 </div>
                 <div className="flex justify-between items-end">
                     <div className="flex flex-col">
-                        {tempoDisplay && (
-                            <div className="flex items-center gap-1 text-[11px] text-gray-400 font-medium mb-0.5">
+                        {tempoDisplay && exibirTempoPreparo && (
+                            <div className="flex items-center gap-1 text-gray-400 mb-0.5">
                                 <Clock className="w-3 h-3" />
-                                <span>{tempoDisplay}</span>
+                                <span className="text-[11px] font-medium">{tempoDisplay}</span>
                             </div>
                         )}
                         <span className="font-bold text-[#2D3436]">
